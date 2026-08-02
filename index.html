@@ -571,13 +571,24 @@ window.addEventListener('keyup', e => {
 });
 
 // ── Boot sequence ─────────────────────────────────────────────────────────────
+let currentTrackId = Math.floor(Math.random() * 5) + 1;
+
+async function fetchAudioAndEvents() {
+  const cb = Date.now();
+  const evRes = await fetch(`audio/events_${currentTrackId}.json?t=${cb}`);
+  const data = await evRes.json();
+  events = data.events;
+
+  const wavRes = await fetch(`audio/track_${currentTrackId}.wav?t=${cb}`);
+  const arrayBuffer = await wavRes.arrayBuffer();
+  audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+}
+
 async function loadAssets() {
   const txt = document.getElementById('status-text');
   const btn = document.getElementById('btn-start');
   
   try {
-    txt.textContent = 'Loading events.json...';
-    const evRes = await fetch('audio/events.json');
     audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     
     txt.textContent = 'Loading soundscape...';
