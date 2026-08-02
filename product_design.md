@@ -1,145 +1,156 @@
-# 🎵 自然音景互动球 — 产品设计稿 v1.0 ✅ 设计定稿
+# 🎵 Nature Soundscape Interactive Orb — Product Design v1.0 ✅ Finalized
 
-> 音频是一台需要你持续供能的机器。按对了它流畅运转；松手或按错，它像失去动力的唱片机，缓缓沉寂。所有设计决策已确认，可进入实现阶段。
-
----
-
-## 一、产品概述
-
-**产品名称**：暂定「自然音景球」（Nature Orb）
-
-**核心体验**：
-
-这是一个**"持续供能"**型音效互动游戏——
-
-- 音频像一台机器，你按住正确的键，它就以正常速度运转
-- 你没按、按错、或在错误的时机松开，它就**指数级地减速**，直至停摆
-- 正确地按住 + 在正确时机松开，才能"解锁"下一段声音
-- 没有失败、没有扣分，但你能清晰感受到"音乐因你而流动，也因你而沉寂"
-
-**核心受众**：ADHD 等需要手部安抚 + 感官刺激的用户——双手固定在 6 个键位上，既避免焦虑性行为（如啃手），又通过音效与视觉双通道实现解压。
+> Audio is a machine that requires your continuous power supply. Press correctly, and it runs smoothly; release or press incorrectly, and it slows down like a record player losing power, slowly fading into silence. All design decisions have been confirmed and are ready for implementation.
 
 ---
 
-## 二、音频系统设计
+## I. Product Overview
 
-### 2.1 素材准备 ✅
+**Product Name**: Tentatively "Nature Orb"
 
-- 5 段自然音效（WAV）预置在代码中，每次点「Regenerate」随机 3 选
-- 每段随机起点截取 10s，拼接成 30s
-- 首段渐入 + 片段交叉淡化（1-2s）+ 末段渐出
-- 播放一次后静止，可点「Regenerate」重新生成
+**Core Experience**:
 
-### 2.2 按键谱生成
+This is a **"continuous power supply"** sound interaction game—
 
-播放前对 30s 音频做**离线 FFT 分析**，生成一份**事件序列（Event Sequence）**：
+- The audio acts like a machine. If you hold down the correct key(s), it runs at normal speed.
+- If you don't press, press incorrectly, or release at the wrong time, it **decelerates exponentially** until it stops.
+- Only by correctly holding + releasing at the right time can you "unlock" the next segment of sound.
+- There are no failures and no score deductions, but you clearly feel that "the music flows because of you, and falls silent because of you."
 
-#### 频段定义
+**Core Audience**: Users with ADHD or those needing hand soothing + sensory stimulation. Keeping both hands anchored on 6 fixed keys (S, D, F, J, K, L) prevents anxious behaviors (like nail-biting) while providing stress relief through dual audio-visual channels.
 
-| 按键 | 频段 | 颜色 |
+---
+
+## II. Game Flow
+
+```
+[Load Page]
+  ① Randomly pick 1 of 5 pre-generated soundscapes
+  Visual: Loading overlay, then "Ready"
+    ↓
+[Interactive Playback]
+  PLAYING → Event → WAITING (slowdown) → User holds → HOLDING → Release → PLAYING
+  ... Until 45s content finishes playing ...
+    ↓
+[End]
+  Audio fades out, orb turns white, background blurs
+  Shows "Regenerate Sounds" button
+    ↓
+[Click Regenerate]
+  Randomly switch to another pre-generated 45s track and start over
+```
+
+---
+
+## III. Audio System Design
+
+### 3.1 Asset Preparation ✅
+
+- 5 segments of natural sound effects (WAV) are preloaded as raw sources.
+- A build script extracts slices up to 15s, splicing them dynamically into exactly a **45s track**.
+- The first segment fades in + clips crossfade (1.5s) + the last segment fades out.
+- The system pre-generates 5 complete tracks to serve as purely static frontend assets.
+
+### 3.2 Key Chart Generation
+
+An **offline FFT analysis** is performed on the 45s audio to generate an **Event Sequence**:
+
+#### Frequency Band Definitions
+
+| Key | Band | Color |
 |------|------|------|
-| A | ~80–250 Hz | 🔴 深红 |
-| S | ~250–500 Hz | 🟠 橙 |
-| D | ~500–1k Hz | 🟡 黄绿 |
-| L | ~1k–2k Hz | 🟢 青绿 |
-| ; | ~2k–5k Hz | 🔵 蓝 |
-| ' | ~5k–16k Hz | 🟣 紫 |
+| S | ~80–250 Hz (Low) | 🔴 Dark Red |
+| D | ~250–500 Hz (MidLow) | 🟠 Orange |
+| F | ~500–1k Hz (Mid) | 🟡 Yellow-Green |
+| J | ~1k–2k Hz (MidHi) | 🟢 Cyan-Green |
+| K | ~2k–5k Hz (High) | 🔵 Blue |
+| L | ~5k–16k Hz (Ultra) | 🟣 Purple |
 
-#### 每个事件（Event）的数据结构
+#### Event Data Structure
 
 ```
 Event {
-  start_time:     音频时间轴上的起始秒数
-  duration:       事件持续时长（1～4s，有快有慢）
-  required_keys:  需要按住的键（1 个或 2 个）
-  release_window: 允许松开的时间窗口（duration ± 约 0.3s）
-  overlap_prev:   与上一事件的叠押时间（0 或 0～0.5s）
+  start_time:     Start time in seconds on the audio timeline
+  duration:       Event duration (2~4.5s, varying speeds)
+  required_keys:  Keys required to be held (1 or 2)
+  release_window: Permitted time window for release (duration ± ~0.3s)
 }
 ```
 
-#### 节奏分布
+#### Rhythm Distribution
 
-- 快节拍：1～2s，紧凑连续
-- 慢节拍：3～4s，深沉舒展
-- 整体有快有慢，变化丰富
-- 偶有双键同时或前后叠押
+- Fast beats: 2~3s, compact and continuous
+- Slow beats: 3~4.5s, deep and stretched
+- A rich mix of fast and slow pacing overall
+- Occasional dual-key simultaneous or staggered presses
 
 ---
 
-## 三、核心交互机制 ✅ 全部确认
+## IV. Core Interaction Mechanism ✅ All Confirmed
 
-### 3.1 状态机
+### 4.1 State Machine
 
 ```
 [PLAYING]
-  音频以 playbackRate = 1.0 正常播放
-  ↓（到达事件起点）
+  Audio plays normally at playbackRate = 1.0
+  ↓ (Reaches event start time)
 [WAITING_FOR_PRESS]
-  弧段开始脉冲提示
-  playbackRate 指数级衰减
-  ↓（弧段亮起后，用户按下正确键）
+  Arc segments begin to pulse as a prompt
+  playbackRate decays exponentially (volume also fades down)
+  ↓ (User presses the correct key after the arc lights up)
 [HOLDING]
-  音频加速恢复至 playbackRate = 1.0（约 100ms）
-  球体变色，弧段常亮
-  ↓（用户在 release_window 内松开）
-[PLAYING]  →  下一段
+  Audio accelerates back to playbackRate = 1.0 (approx. 100ms)
+  Orb changes color, arc stays illuminated solid
+  ↓ (User releases within the release_window)
+[PLAYING]  →  Next segment
 ```
 
-### 3.2 指数级慢放曲线
+### 4.2 Exponential Slowdown Curve
 
-当处于 `WAITING_FOR_PRESS` 状态，或超时未松时：
+When in the `WAITING_FOR_PRESS` state, or if held too long:
 
 ```
 playbackRate(t) = e^(−λ · t)
-
-λ ≈ 0.8～1.2（衰减系数）
-
-示例（λ=1.0）：
-  t = 0.0s → rate = 1.00
-  t = 0.5s → rate ≈ 0.61
-  t = 1.0s → rate ≈ 0.37
-  t = 2.0s → rate ≈ 0.14
-  t = 3.0s → rate ≈ 0.05（近乎停止）
 ```
 
-用户按下正确键后，rate 在约 100ms 内线性恢复至 1.0。
+After the user presses the correct key, the rate linearly recovers to 1.0 within ~100ms. A `masterGain` parameter mirrors the slowdown to prevent weird pitch distortions at very low playback rates.
 
-### 3.3 按住 + 松开机制
+### 4.3 Hold + Release Mechanism
 
 ```
-✅ 正确流程：
-  ① 弧段亮起（事件 start_time）
-  ② 用户按下正确键（严格在亮起之后）
-     → rate 迅速恢复 1.0，球体变色
-  ③ 用户持续按住
-  ④ 在 release_window 内松开
-     → 解锁，进入 PLAYING，弧段熄灭
+✅ Correct Flow:
+  ① Arc lights up (Event start_time)
+  ② User presses the correct key (strictly after it lights up)
+     → rate quickly recovers to 1.0, orb changes color
+  ③ User continues to hold
+  ④ Releases within the release_window
+     → Unlocked, enters PLAYING, arc extinguishes
 
-❌ 错误情形 A：提前松开（在 release_window 开始前）
-  → rate 重新开始指数衰减
-  → 弧段重新脉冲（等待重新按下）
+❌ Error Scenario A: Early release (before release_window begins)
+  → rate resumes exponential decay
+  → Arc resumes pulsing (waiting to be pressed again)
 
-❌ 错误情形 B：超时未松（release_window 结束后还在按）✅
-  → rate 重新开始指数衰减
-  → 弧段重新脉冲
-  → 要求松开后再次按下（严格要求松开时机）
+❌ Error Scenario B: Held too long (still holding after release_window ends) ✅
+  → rate resumes exponential decay
+  → Arc resumes pulsing
+  → Requires releasing and then pressing again (strict timing requirement for release)
 
-❌ 错误情形 C：按错键或未按
-  → 与不按完全相同，无任何反馈，rate 继续衰减
+❌ Error Scenario C: Wrong key or no key pressed
+  → Treated exactly as not pressing at all, no feedback, rate continues to decay
 ```
 
-### 3.4 双键事件
+### 4.4 Dual-Key Events
 
-| 类型 | 描述 | 操作要求 |
+| Type | Description | Operation Requirement |
 |------|------|----------|
-| **双键同时** | 两弧段同时亮起 | 两键都按住，两键都在 window 内松开 |
-| **双键叠押** | 先亮 A，约 0.5s 后亮 S，A 还未结束 | 先按住 A，S 亮起后加按 S，两键在统一 window 内松开（允许约 0.3s 先后差） |
+| **Simultaneous Dual-Key** | Two arcs light up at the same time | Both keys must be held, and both must be released within the window |
+| **Staggered Dual-Key** | F lights up first, ~0.5s later D lights up while F is still active | Hold F first, then add D when it lights up, release both within a unified window |
 
 ---
 
-## 四、视觉 UI 设计
+## V. Visual UI Design
 
-### 4.1 整体布局
+### 5.1 Overall Layout (Hemisphere Mapping)
 
 ```
 ┌─────────────────────────────────────┐
@@ -151,104 +162,46 @@ playbackRate(t) = e^(−λ · t)
 │      🟡 │  ╰────╯  │ 🟣            │
 │         ╰──────────╯               │
 │                                     │
-│   A    S    D  │  L    ;    '      │
-│   低 ←──────────────────→ 高       │
+│ Left Hand │ Right Hand             │
+│   F D S   │   J K L                │
 │                                     │
-│  [雨声 · 风声 · 虫鸣]  [Regenerate]│
+│           [Status Text]            │
 └─────────────────────────────────────┘
 ```
 
-### 4.2 球体与弧段状态
+*Note: The arcs are mapped ergonomically. Left hemisphere corresponds to Left Hand (F, D, S) and right hemisphere corresponds to Right Hand (J, K, L).*
 
-| 状态 | 弧段 | 球体 |
-|------|------|------|
-| **Loading** | 随机颜色缓慢流动 | **随机颜色缓慢渐变（预览感）** ✅ |
-| 播放中（事件之间） | 全部暗淡（10% 亮度） | 基底灰蓝，缓慢呼吸 |
-| 等待按键（慢放中） | 对应弧段脉冲闪烁 | 呼吸频率随 rate 降低变慢 |
-| 按住正确键 | 对应弧段常亮 | 变为对应颜色，轻弹弹动 |
-| 双键叠押中 | 两弧段先后常亮 | 颜色混合渐变 |
-| 松开解锁后 | 弧段渐暗熄灭（约 1s） | 颜色缓慢褪回基底 |
-| 超时未松 ✅ | 弧段重新脉冲闪烁 | 随 rate 重新减速，呼吸再次变慢 |
-| 音频播完 | 全部熄灭 | 渐褪至基底色 |
+### 5.2 Breathing Animation Linked to playbackRate
 
-### 4.3 呼吸动画联动 playbackRate
+The orb's **breathing frequency** is linked in real-time with `playbackRate`:
 
-球体的**呼吸频率**与 `playbackRate` 实时联动：
+- rate = 1.0 → Normal breathing (~0.3Hz)
+- rate = 0.5 → Breathing halved (~0.15Hz)
+- rate → 0 → Orb is almost still, with only very faint pulsations
 
-- rate = 1.0 → 呼吸正常（~0.3Hz）
-- rate = 0.5 → 呼吸减半（~0.15Hz）
-- rate → 0 → 球体几乎静止，只有极微弱脉动
+> No numerical display is needed; users intuitively perceive the audio state from the orb's "sense of life".
 
-> 不需要任何数字显示，用户从球体"生命感"直觉感知音频状态。
+### 5.3 Color System
 
-### 4.4 颜色系统
-
-- 低频→高频 对应 暖→冷：🔴 → 🟠 → 🟡 → 🟢 → 🔵 → 🟣
-- 多键混色：各激活频段颜色加权平均
-- 叠押：先按颜色 → 后按颜色渐变融入
-- 底部键位标注：轻描淡写，不抢视觉焦点
+- Multi-key color mixing: Weighted average of active band colors
+- Staggered press: First pressed color → Blends into the second pressed color
+- When audio finishes, the orb loses color and slowly turns to pure white.
 
 ---
 
-## 五、游戏流程
+## VI. Technology Stack
 
-```
-[点击 Generate]
-    ↓
-[Loading（约 2-3s）]
-  ① 随机选 3 段音效
-  ② 各随机截取 10s（随机起点）
-  ③ 拼接 + 交叉淡化 + 渐入渐出
-  ④ 离线 FFT → 生成事件序列
-  视觉：球体随机颜色缓慢渐变
-    ↓
-[就绪] 球体呼吸，提示"按任意键开始"
-    ↓
-[互动播放]
-  PLAYING → 事件 → WAITING（慢放）→ 用户按住 → HOLDING → 松开 → PLAYING
-  ... 直到 30s 内容播完 ...
-    ↓
-[结束] 音频渐出，球体渐褪，显示"Regenerate"
-```
-
----
-
-## 六、技术选型
-
-| 模块 | 方案 |
+| Module | Solution |
 |------|------|
-| 音频拼接 | OfflineAudioContext 预处理，生成单一 AudioBuffer |
-| FFT 离线分析 | OfflineAudioContext + AnalyserNode，逐帧采样 |
-| 按键谱生成 | 峰值检测算法，输出 Event[] |
-| 慢放控制 | AudioBufferSourceNode.playbackRate（Web Audio API 原生） |
-| 频段独奏 | BiquadFilterNode（bandpass × 6）+ GainNode |
-| 动画渲染 | Canvas 2D + requestAnimationFrame |
-| 球体呼吸联动 | 每帧读取 playbackRate，映射到 scale 振幅和频率 |
-| 键盘监听 | keydown / keyup |
-| 资源 | WAV 文件预置在 `/audio/` 目录下 |
-| 部署 | 纯前端静态页面（HTML + JS） |
+| Audio Splicing | Node.js `fs` + buffer manipulation (offline build script) |
+| Offline FFT Analysis | Custom Node.js fast-fourier-transform on RAW PCM |
+| Key Chart Generation | Sliding window peak detection algorithm, outputs Event[] |
+| Slowdown Control | AudioBufferSourceNode.playbackRate (Native Web Audio API) |
+| Animation Rendering | Canvas 2D + requestAnimationFrame |
+| Orb Breathing Link | Reads playbackRate per frame, maps to scale amplitude |
+| Keyboard Listening | keydown / keyup |
+| Deployment | Pure static HTML/JS/CSS served via Render Static Site |
 
 ---
 
-## 七、已确认事项汇总 ✅ 全部定稿
-
-| 模块 | 决定 |
-|------|------|
-| 音效来源 | 预置代码中，5 选 3 |
-| 截取规则 | 随机起始点截取 10s |
-| 拼接 | 渐入 + 交叉淡化 + 渐出 |
-| 播放模式 | 遇事件等待，30s 播完结束，Regenerate 重新生成 |
-| 等待时音效 | 指数级慢放（e^−λt），playbackRate 趋近 0 |
-| 核心机制 | 按住正确键音频恢复，在松开窗口内松开解锁下一段 |
-| 超时未松 | 音频重新慢放，弧段重新脉冲，要求松开后再按 |
-| 按键时机 | 严格在弧段亮起后有效 |
-| 错误键/不按 | 完全相同，无任何反馈，慢放继续 |
-| Loading 视觉 | 球体随机颜色缓慢渐变（预览感） |
-| 视觉提示 | 弧段光晕（方案 A），呼吸频率联动 playbackRate |
-| 颜色方向 | 暖→冷（红橙黄绿蓝紫）对应低→高 |
-| 节奏分布 | 有快有慢（1-2s 快节拍，3-4s 慢节拍） |
-| 产品定位 | 放松解压，ADHD 辅助，无得分无失败 |
-
----
-
-*设计稿版本：v1.0 ✅ 设计定稿 — 可进入实现阶段*
+*Design Document Version: v2.0 ✅ Updated for Final Product*
