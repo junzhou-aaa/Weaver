@@ -607,6 +607,15 @@ document.getElementById('btn-regen').addEventListener('click', async (e) => {
   const txt = document.getElementById('status-text');
   btn.disabled = true;
   
+  if (source) {
+    source.stop();
+    source.disconnect();
+  }
+  state.mode = GAME_STATE.IDLE;
+  state.evIdx = 0;
+  state.virtualTime = 0;
+  state.heldKeys.clear();
+  
   try {
     // Pick a new random track different from the current one
     let newTrackId;
