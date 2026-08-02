@@ -1,0 +1,23 @@
+{
+  "generatedAt": "2026-08-02T16:16:12.711Z",
+  "totalDuration": 45,
+  "sampleRate": 44100,
+  "crossfade": 1.5,
+  "clips": [
+    {
+      "file": "269062__nebulousflynn__wood-burning-stove.wav",
+      "startOffset": 68.217,
+      "duration": 15
+    },
+    {
+      "file": "786265__klankbeeld__wind-in-birch-trees-449-pm-160221_0857.wav",
+      "startOffset": 16.331,
+      "duration": 15
+    },
+    {
+      "file": "862225__frimframmed__morning-bird-song-in-coronado-national-forest-huachuca-mountain-foothills.wav",
+      "startOffset": 819.585,
+      "duration": 15
+    }
+  ]
+}

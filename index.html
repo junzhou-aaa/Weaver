@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nature Orb — Interactive Audio</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;300;400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --bg: #060a10;
+      --dim: rgba(255,255,255,0.25);
+      --mid: rgba(255,255,255,0.52);
+      --hi:  rgba(255,255,255,0.85);
+    }
+    html, body {
+      width: 100%; height: 100%;
+      background: var(--bg);
+      color: var(--hi);
+      font-family: 'Outfit', system-ui, sans-serif;
+      overflow: hidden;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body::after {
+      content: ''; position: fixed; inset: 0;
+      pointer-events: none; z-index: 100;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      background-size: 256px 256px;
+      opacity: 0.028; mix-blend-mode: overlay;
+    }
+
+    #app {
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: space-between;
+      width: 100%; height: 100vh;
+      padding: 2rem 1.5rem 1.75rem;
+    }
+    header { display: flex; flex-direction: column; align-items: center; gap: 0.3rem; }
+    h1 { font-size: clamp(1.1rem,3vw,1.6rem); font-weight: 200; letter-spacing: 0.45em; text-transform: uppercase; }
+    .subtitle { font-size: 0.68rem; letter-spacing: 0.2em; color: var(--dim); text-transform: uppercase; }
+
+    #canvas-wrap { flex: 1; width: 100%; min-height: 0; display: flex; align-items: center; justify-content: center; position: relative; }
+    canvas { width: 100%; height: 100%; display: block; }
+
+    /* Overlay UI */
+    #overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: rgba(6, 10, 16, 0.7);
+      backdrop-filter: blur(8px);
+      z-index: 10;
+      transition: opacity 0.5s;
+    }
+    #overlay.hidden {
+      opacity: 0; pointer-events: none;
+    }
+    #status-text {
+      margin-bottom: 2rem; font-size: 0.9rem; letter-spacing: 0.2em; color: var(--hi);
+    }
+    #btn-start {
+      padding: 0.8rem 3rem;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 3rem;
+      background: rgba(255,255,255,0.05);
+      color: var(--hi); font-family: inherit; font-size: 0.9rem; font-weight: 300;
+      letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    #btn-start:hover { background: rgba(255,255,255,0.12); }
+    #btn-regen {
+      padding: 0.8rem 3rem;
+      border: 1px solid rgba(255,255,255,0.2); border-radius: 3rem;
+      background: rgba(255,255,255,0.05);
+      color: var(--hi); font-family: inherit; font-size: 0.9rem; font-weight: 300;
+      letter-spacing: 0.2em; text-transform: uppercase; cursor: pointer;
+      transition: background 0.3s, transform 0.2s;
+    }
+    #btn-regen:hover { background: rgba(255,255,255,0.12); }
+    #btn-regen:active { transform: scale(0.95); }
+    #btn-regen:disabled { opacity: 0.5; pointer-events: none; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>Nature Orb</h1>
+    <p class="subtitle">IMMERSIVE RELAXATION</p>
+  </header>
+
+  <div id="canvas-wrap">
+    <canvas id="orb"></canvas>
+    <div id="overlay">
+      <div id="status-text">Loading audio assets...</div>
+      <button id="btn-start" disabled>Play</button>
+      <button id="btn-regen" style="display:none;">Regenerate Sounds</button>
+    </div>
+  </div>
+</div>
+
+<script>
+'use strict';
+
+// ── Analogous palette ─────────────────────────────────────────────────────────
+const BANDS = [
+  { key: 'S', hue: 344, rgb: [210, 110, 135], hex: '#D26E87' }, 
+  { key: 'D', hue:  20, rgb: [220, 140, 100], hex: '#DC8C64' }, 
+  { key: 'F', hue:  42, rgb: [210, 165,  75], hex: '#D2A54B' }, 
+  { key: 'J', hue: 145, rgb: [ 90, 170, 128], hex: '#5AAA80' }, 
+  { key: 'K', hue: 205, rgb: [ 85, 155, 195], hex: '#559BC3' }, 
+  { key: 'L', hue: 265, rgb: [145, 115, 205], hex: '#9173CD' }, 
+];
+const CHAR_TO_IDX = { 'S':0, 'D':1, 'F':2, 'J':3, 'K':4, 'L':5 };
+const KEY_MAP     = { KeyS: 0, KeyD: 1, KeyF: 2, KeyJ: 3, KeyK: 4, KeyL: 5 };
+
+// ── Canvas Setup ──────────────────────────────────────────────────────────────
+const canvas = document.getElementById('orb');
+const ctx    = canvas.getContext('2d');
+function resize() {
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width  = canvas.clientWidth  * dpr;
+  canvas.height = canvas.clientHeight * dpr;
+}
+window.addEventListener('resize', resize);
+resize();
+
+// ── Visual Helpers ────────────────────────────────────────────────────────────
+function lerpHue(a, b, t) {
+  let d = b - a;
+  if (d >  180) d -= 360;
+  if (d < -180) d += 360;
+  return (a + d * t + 360) % 360;
+}
+function hslStr(h, s, l, a = 1) {
+  return `hsla(${h.toFixed(1)},${s.toFixed(1)}%,${l.toFixed(1)}%,${a.toFixed(3)})`;
+}
+
+// ── Audio & State ─────────────────────────────────────────────────────────────
+let audioCtx, source, audioBuffer, masterGain;
+let events = [];
+
+const GAME_STATE = {
+  IDLE: 'IDLE',
+  PLAYING: 'PLAYING',
+  WAITING: 'WAITING',
+  HOLDING: 'HOLDING',
+  DONE: 'DONE'
+};
+
+const state = {
+  mode: GAME_STATE.IDLE,
+  virtualTime: 0,
+  currentRate: 1.0,
+  evIdx: 0,
+
+  heldKeys: new Set(), // indices 0-5
+
+  // Visuals
+  curH: 0, curS: 0, curL: 90,   // Base ball colour
+  tgtH: 0, tgtS: 0, tgtL: 90,
+
+  arcLevels: BANDS.map(() => 0), // 0..1 glow level for each segment
+  arcPulsePhase: 0,
+
+  breathPhase: 0,
+  auroras: [],
+  flashes: [],
+};
+
+// ── Game Logic ────────────────────────────────────────────────────────────────
+function getRequiredKeys() {
+  if (state.evIdx >= events.length) return [];
+  return events[state.evIdx].keys.map(k => CHAR_TO_IDX[k]);
+}
+
+function checkKeys() {
+  const req = getRequiredKeys();
+  if (req.length === 0) return false;
+  // Must hold exactly the required keys
+  if (state.heldKeys.size !== req.length) return false;
+  return req.every(k => state.heldKeys.has(k));
+}
+
+function spawnAurora(idx) {
+  state.auroras.push({
+    rgb:        BANDS[idx].rgb,
+    sweepAngle: Math.random() * Math.PI,
+    freq:       1 + Math.floor(Math.random() * 2),
+    phase:      Math.random() * Math.PI * 2,
+    amp:        0.12 + Math.random() * 0.10,
+    progress:   0,
+    speed:      0.32 + Math.random() * 0.18,
+    peakAlpha:  0.35 + Math.random() * 0.20,
+    delay:      0,
+  });
+  state.flashes.push({ rgb: BANDS[idx].rgb, life: 0, maxLife: 0.5 });
+  
+  // Shift target colour slightly towards the pressed key to mix
+  state.tgtH = BANDS[idx].hue;
+  state.tgtS = 40;
+  state.tgtL = 75;
+}
+
+// ── Update Loop ───────────────────────────────────────────────────────────────
+let lastMs = performance.now();
+
+function tick(nowMs) {
+  requestAnimationFrame(tick);
+  const dt = Math.min((nowMs - lastMs) / 1000, 0.08);
+  lastMs = nowMs;
+
+  // 1. Audio State Machine
+  if (state.mode === GAME_STATE.PLAYING) {
+    state.currentRate += (1.0 - state.currentRate) * 8.0 * dt;
+    
+    // Check if we hit the next event
+    if (state.evIdx < events.length) {
+      const ev = events[state.evIdx];
+      if (state.virtualTime >= ev.startTime) {
+        state.mode = GAME_STATE.WAITING;
+        state.tgtS = 0; state.tgtL = 90; // Fade back to white base
+      }
+    } else if (state.evIdx >= events.length && state.virtualTime >= (audioBuffer ? audioBuffer.duration : 30)) {
+      state.mode = GAME_STATE.DONE;
+      state.tgtS = 0; 
+      state.tgtL = 100;
+      
+      const overlay = document.getElementById('overlay');
+      document.getElementById('status-text').textContent = 'Session Complete';
+      document.getElementById('btn-start').style.display = 'none';
+      document.getElementById('btn-regen').style.display = 'block';
+      overlay.classList.remove('hidden');
+    }
+  } 
+  else if (state.mode === GAME_STATE.WAITING) {
+    // Exponential decay
+    state.currentRate *= Math.exp(-1.5 * dt); 
+    
+    if (checkKeys()) {
+      state.mode = GAME_STATE.HOLDING;
+      getRequiredKeys().forEach(k => spawnAurora(k));
+    }
+  } 
+  else if (state.mode === GAME_STATE.HOLDING) {
+    state.currentRate += (1.0 - state.currentRate) * 10.0 * dt;
+    
+    const ev = events[state.evIdx];
+    const releaseTarget = ev.startTime + ev.duration;
+
+    if (!checkKeys()) {
+      // Keys were released
+      if (state.virtualTime >= releaseTarget - 0.35) {
+        // Good release! (Within grace period or after)
+        state.evIdx++;
+        state.mode = GAME_STATE.PLAYING;
+      } else {
+        // Early release!
+        state.mode = GAME_STATE.WAITING;
+      }
+    } else {
+      // Still holding
+      if (state.virtualTime > releaseTarget + 0.25) {
+        // Overheld past the grace period!
+        state.mode = GAME_STATE.WAIT_RELEASE;
+      }
+    }
+  }
+  else if (state.mode === GAME_STATE.WAIT_RELEASE) {
+    // Audio dies because they didn't release in time
+    state.currentRate *= Math.exp(-3.0 * dt); 
+    
+    // They must fully release to unlock the next segment
+    if (state.heldKeys.size === 0) {
+      state.evIdx++;
+      state.mode = GAME_STATE.PLAYING;
+    }
+  }
+
+  // Apply rate and advance time
+  if (source && state.mode !== GAME_STATE.IDLE && state.mode !== GAME_STATE.DONE) {
+    const rate = Math.max(0.01, state.currentRate);
+    source.playbackRate.value = rate;
+    
+    // Also fade volume out when speed drops, to prevent weird pitch distortion
+    if (masterGain) {
+      masterGain.gain.value = Math.max(0, state.currentRate - 0.1); 
+    }
+    
+    state.virtualTime += dt * rate;
+  }
+
+  // 2. Visual Updates
+  updateVisuals(dt);
+}
+
+function updateVisuals(dt) {
+  const dpr = window.devicePixelRatio || 1;
+  const w   = canvas.width  / dpr;
+  const h   = canvas.height / dpr;
+  const cx  = w / 2, cy = h / 2;
+  const R   = Math.min(w, h) * 0.205;
+
+  // HSL smoothing
+  const spd = 2.0;
+  state.curH = lerpHue(state.curH, state.tgtH, Math.min(1, spd * dt));
+  state.curS += (state.tgtS - state.curS) * Math.min(1, spd * dt);
+  state.curL += (state.tgtL - state.curL) * Math.min(1, spd * dt);
+
+  // Arc levels
+  state.arcPulsePhase += 4.0 * dt;
+  const reqKeys = getRequiredKeys();
+  
+  // Calculate anticipation alpha for upcoming events
+  const ANTICIPATION_TIME = 2.0;
+  const anticipationAlpha = BANDS.map(() => 0);
+  for (let idx = state.evIdx; idx < events.length; idx++) {
+    const ev = events[idx];
+    const timeUntil = ev.startTime - state.virtualTime;
+    if (timeUntil < 0) continue; 
+    if (timeUntil > ANTICIPATION_TIME) break;
+    const ratio = 1.0 - (timeUntil / ANTICIPATION_TIME);
+    ev.keys.forEach(kStr => {
+      const i = CHAR_TO_IDX[kStr];
+      if (i !== undefined) {
+        anticipationAlpha[i] = Math.max(anticipationAlpha[i], Math.pow(ratio, 2));
+      }
+    });
+  }
+  
+  BANDS.forEach((_, i) => {
+    let targetLevel = 0.0;
+    
+    if ((state.mode === GAME_STATE.WAITING || state.mode === GAME_STATE.WAIT_RELEASE) && reqKeys.includes(i)) {
+      // Pulsing when waiting
+      targetLevel = 0.3 + 0.7 * Math.abs(Math.sin(state.arcPulsePhase));
+      // Fast warning flash if they overheld
+      if (state.mode === GAME_STATE.WAIT_RELEASE) {
+        targetLevel = 0.5 + 0.5 * Math.sin(state.arcPulsePhase * 3.0);
+      }
+    } else if (state.mode === GAME_STATE.HOLDING && reqKeys.includes(i)) {
+      // Solid when holding
+      targetLevel = 1.0;
+    }
+
+    state.arcLevels[i] += (targetLevel - state.arcLevels[i]) * Math.min(1, 6.0 * dt);
+  });
+
+  // Breathing (tied to playback rate)
+  const breathRate = 0.05 + 0.25 * state.currentRate; 
+  state.breathPhase += 2 * Math.PI * breathRate * dt;
+
+  // Advance auroras and flashes
+  for (const au of state.auroras) { au.progress += au.speed * dt; }
+  state.auroras = state.auroras.filter(au => au.progress < 1.0);
+  for (const fl of state.flashes) fl.life += dt;
+  state.flashes = state.flashes.filter(fl => fl.life < fl.maxLife);
+
+  // Draw
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, w, h);
+  
+  drawBackground(w, h);
+  drawArcs(cx, cy, R, anticipationAlpha);
+  drawBall(cx, cy, R);
+}
+
+// ── Rendering Functions ───────────────────────────────────────────────────────
+function drawBackground(w, h) {
+  ctx.fillStyle = '#060a10';
+  ctx.fillRect(0, 0, w, h);
+  const gr = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, Math.min(w,h) * 0.62);
+  gr.addColorStop(0, hslStr(state.curH, state.curS * 0.4, state.curL, 0.15));
+  gr.addColorStop(1, hslStr(state.curH, 0, 0, 0));
+  ctx.fillStyle = gr;
+  ctx.fillRect(0, 0, w, h);
+}
+
+function drawArcs(cx, cy, R, anticipationAlpha) {
+  const innerR = R * 1.30, outerR = R * 1.60;
+  const totalArc = (2 * Math.PI) / BANDS.length;
+  const gapRad = 0.11;
+  const defaultArcRad = totalArc - gapRad;
+  const midR = (innerR + outerR) * 0.5;
+
+  // Map to Hemispheres: Left Hand (S,D,F) on Left, Right Hand (J,K,L) on Right
+  const ANGLES = [ 2*Math.PI/3, Math.PI, 4*Math.PI/3, -Math.PI/3, 0, Math.PI/3 ];
+
+  BANDS.forEach((band, i) => {
+    const eff = state.arcLevels[i];
+    const anti = anticipationAlpha[i];
+    const visibility = Math.max(eff, anti);
+    
+    const midA = ANGLES[i];
+    const startA_box = midA - defaultArcRad / 2;
+    const endA_box   = midA + defaultArcRad / 2;
+
+    // 1. Draw persistent box frame for the hand position
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, startA_box, endA_box);
+    ctx.arc(cx, cy, innerR, endA_box, startA_box, true);
+    ctx.closePath();
+    ctx.strokeStyle = `rgba(${band.rgb.join(',')}, 0.15)`;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 2. Draw Key Label near the box
+    ctx.fillStyle = `rgba(${band.rgb.join(',')}, ${0.2 + visibility * 0.8})`;
+    ctx.font = "300 12px Outfit";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    const textR = outerR + 18;
+    const txtX = cx + Math.cos(midA) * textR;
+    const txtY = cy + Math.sin(midA) * textR;
+    ctx.fillText(band.key, txtX, txtY);
+
+    if (visibility < 0.01) return;
+
+    let arcRad = defaultArcRad;
+    
+    // If holding, shrink the arc to indicate remaining time
+    if (state.mode === GAME_STATE.HOLDING && getRequiredKeys().includes(i)) {
+      const ev = events[state.evIdx];
+      if (ev) {
+        const timeRemaining = (ev.startTime + ev.duration) - state.virtualTime;
+        const ratio = Math.max(0, Math.min(1, timeRemaining / ev.duration));
+        arcRad = defaultArcRad * ratio;
+      }
+    }
+    if (arcRad < 0.005) return;
+
+    const startA = midA - arcRad / 2;
+    const endA   = midA + arcRad / 2;
+
+    // Glow
+    ctx.save();
+    ctx.shadowColor = `rgba(${band.rgb.join(',')}, ${visibility * 0.8})`;
+    ctx.shadowBlur = 10 + visibility * 20;
+    ctx.beginPath();
+    ctx.arc(cx, cy, midR, startA, endA);
+    ctx.strokeStyle = `rgba(${band.rgb.join(',')}, ${visibility * 0.5})`;
+    ctx.lineWidth = outerR - innerR;
+    ctx.stroke();
+    ctx.restore();
+
+    // Fill Box
+    ctx.beginPath();
+    ctx.arc(cx, cy, outerR, startA, endA);
+    ctx.arc(cx, cy, innerR, endA, startA, true);
+    ctx.closePath();
+    ctx.fillStyle = `rgba(${band.rgb.join(',')}, ${0.1 + visibility * 0.7})`;
+    ctx.fill();
+    
+    // Rim
+    if (visibility > 0.4) {
+      ctx.beginPath();
+      ctx.arc(cx, cy, innerR + 1.5, startA, endA);
+      ctx.strokeStyle = `rgba(${band.rgb.join(',')}, ${visibility * 0.8})`;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    }
+  });
+}
+
+
+
+function drawBall(cx, cy, R) {
+  const h = state.curH, s = state.curS, l = state.curL;
+  const breathScale = 1 + 0.03 * Math.sin(state.breathPhase) * Math.max(0.1, state.currentRate);
+  const r = R * breathScale;
+
+  // Outer ambient glow
+  const outerGlow = ctx.createRadialGradient(cx, cy, r * 0.65, cx, cy, r * 1.8);
+  outerGlow.addColorStop(0, hslStr(h, s, l, 0.18));
+  outerGlow.addColorStop(1, hslStr(h, s, l, 0));
+  ctx.beginPath(); ctx.arc(cx, cy, r * 1.8, 0, Math.PI * 2);
+  ctx.fillStyle = outerGlow; ctx.fill();
+
+  // Flashes
+  for (const fl of state.flashes) {
+    const t = fl.life / fl.maxLife;
+    const alpha = (1 - t) * 0.45;
+    const ringR = r * (1.04 + t * 0.32);
+    ctx.beginPath(); ctx.arc(cx, cy, ringR, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(${fl.rgb.join(',')},${alpha.toFixed(3)})`;
+    ctx.lineWidth = (1 - t) * 5;
+    ctx.stroke();
+  }
+
+  ctx.save();
+  ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+
+  // Base Sphere
+  const hx = cx - r * 0.24, hy = cy - r * 0.24;
+  const sphere = ctx.createRadialGradient(hx, hy, r * 0.03, cx, cy, r);
+  sphere.addColorStop(0,    hslStr(h, Math.max(0, s - 18), Math.min(96, l + 20)));
+  sphere.addColorStop(0.42, hslStr(h, s, l));
+  sphere.addColorStop(1,    hslStr(h, Math.min(100, s + 10), Math.max(22, l - 30)));
+  ctx.fillStyle = sphere;
+  ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  // Auroras
+  for (const au of state.auroras) {
+    const t = au.progress;
+    const alpha = Math.sin(t * Math.PI) * au.peakAlpha;
+    if (alpha < 0.005) continue;
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(au.sweepAngle);
+
+    const sweepY = -r * 1.3 + t * r * 2.6;
+    const bandH = r * (0.22 + 0.08 * Math.sin(t * Math.PI * 2));
+    const steps = 64;
+    const step = (r * 2 + 60) / steps;
+
+    ctx.beginPath();
+    for (let i = 0; i <= steps; i++) {
+      const x = -r - 30 + i * step;
+      const wave = Math.sin(au.freq * Math.PI * (x / r) + au.phase) * r * au.amp;
+      ctx[i === 0 ? 'moveTo' : 'lineTo'](x, sweepY - bandH + wave);
+    }
+    for (let i = steps; i >= 0; i--) {
+      const x = -r - 30 + i * step;
+      const wave = Math.sin(au.freq * Math.PI * (x / r) + au.phase) * r * au.amp;
+      ctx.lineTo(x, sweepY + bandH + wave);
+    }
+    ctx.closePath();
+
+    const grad = ctx.createLinearGradient(0, sweepY - bandH * 1.4, 0, sweepY + bandH * 1.4);
+    const c = au.rgb.join(',');
+    grad.addColorStop(0,   `rgba(${c},0)`);
+    grad.addColorStop(0.2, `rgba(${c},${(alpha * 0.55).toFixed(3)})`);
+    grad.addColorStop(0.5, `rgba(${c},${alpha.toFixed(3)})`);
+    grad.addColorStop(0.8, `rgba(${c},${(alpha * 0.55).toFixed(3)})`);
+    grad.addColorStop(1,   `rgba(${c},0)`);
+    ctx.fillStyle = grad;
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Specular
+  const spec = ctx.createRadialGradient(hx, hy, 0, hx, hy, r * 0.44);
+  spec.addColorStop(0, 'rgba(255,255,255,0.30)');
+  spec.addColorStop(0.5, 'rgba(255,255,255,0.07)');
+  spec.addColorStop(1, 'rgba(255,255,255,0)');
+  ctx.fillStyle = spec; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  // Shadow
+  const shadow = ctx.createRadialGradient(cx, cy + r * 0.5, 0, cx, cy + r * 0.5, r * 0.6);
+  shadow.addColorStop(0, 'rgba(0,0,0,0.18)');
+  shadow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = shadow; ctx.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+  ctx.restore();
+}
+
+// ── Input ─────────────────────────────────────────────────────────────────────
+window.addEventListener('keydown', e => {
+  if (e.repeat) return;
+  const idx = KEY_MAP[e.code];
+  if (idx !== undefined) {
+    state.heldKeys.add(idx);
+  }
+});
+
+window.addEventListener('keyup', e => {
+  const idx = KEY_MAP[e.code];
+  if (idx !== undefined) {
+    state.heldKeys.delete(idx);
+  }
+});
+
+// ── Boot sequence ─────────────────────────────────────────────────────────────
+async function loadAssets() {
+  const txt = document.getElementById('status-text');
+  const btn = document.getElementById('btn-start');
+  
+  try {
+    txt.textContent = 'Loading events.json...';
+    const evRes = await fetch('audio/events.json');
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    
+    txt.textContent = 'Loading soundscape...';
+    await fetchAudioAndEvents();
+
+    txt.textContent = 'Ready';
+    btn.disabled = false;
+  } catch (err) {
+    txt.textContent = 'Error: ' + err.message;
+    console.error(err);
+  }
+}
+
+document.getElementById('btn-regen').addEventListener('click', async (e) => {
+  const btn = e.target;
+  const txt = document.getElementById('status-text');
+  btn.disabled = true;
+  
+  try {
+    // Pick a new random track different from the current one
+    let newTrackId;
+    do {
+      newTrackId = Math.floor(Math.random() * 5) + 1;
+    } while (newTrackId === currentTrackId);
+    currentTrackId = newTrackId;
+    
+    txt.textContent = 'Loading new soundscape...';
+    await fetchAudioAndEvents();
+    
+    document.getElementById('status-text').textContent = 'Ready';
+    document.getElementById('btn-regen').style.display = 'none';
+    document.getElementById('btn-start').style.display = 'block';
+    document.getElementById('btn-start').disabled = false;
+  } catch (err) {
+    txt.textContent = 'Error: ' + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+});
+
+document.getElementById('btn-start').addEventListener('click', async () => {
+  document.getElementById('overlay').classList.add('hidden');
+  
+  if (audioCtx.state === 'suspended') {
+    await audioCtx.resume();
+  }
+
+  masterGain = audioCtx.createGain();
+  masterGain.connect(audioCtx.destination);
+
+  source = audioCtx.createBufferSource();
+  source.buffer = audioBuffer;
+  source.connect(masterGain);
+  source.start();
+
+  state.mode = GAME_STATE.PLAYING;
+  state.virtualTime = 0;
+});
+
+// Start loop and load
+requestAnimationFrame(t => { lastMs = performance.now(); requestAnimationFrame(tick); });
+loadAssets();
+
+</script>
+</body>
+</html>

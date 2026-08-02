@@ -1,0 +1,395 @@
+{
+  "generatedAt": "2026-08-02T16:16:07.297Z",
+  "totalDuration": 30,
+  "sampleRate": 44100,
+  "summary": {
+    "totalEvents": 14,
+    "typeCounts": {
+      "single": 7,
+      "dual-simultaneous": 7
+    },
+    "keyCounts": {
+      "A": 0,
+      "S": 3,
+      "D": 2,
+      "L": 6,
+      ";": 0,
+      "'": 0,
+      "K": 5,
+      "J": 5
+    }
+  },
+  "bands": [
+    {
+      "key": "S",
+      "label": "Low",
+      "freqLow": 80,
+      "freqHigh": 250,
+      "color": "#C53030"
+    },
+    {
+      "key": "D",
+      "label": "MidLow",
+      "freqLow": 250,
+      "freqHigh": 500,
+      "color": "#DD6B20"
+    },
+    {
+      "key": "F",
+      "label": "Mid",
+      "freqLow": 500,
+      "freqHigh": 1000,
+      "color": "#D69E2E"
+    },
+    {
+      "key": "J",
+      "label": "MidHi",
+      "freqLow": 1000,
+      "freqHigh": 2000,
+      "color": "#276749"
+    },
+    {
+      "key": "K",
+      "label": "High",
+      "freqLow": 2000,
+      "freqHigh": 5000,
+      "color": "#2B6CB0"
+    },
+    {
+      "key": "L",
+      "label": "Ultra",
+      "freqLow": 5000,
+      "freqHigh": 16000,
+      "color": "#553C9A"
+    }
+  ],
+  "events": [
+    {
+      "id": 0,
+      "startTime": 1.602,
+      "duration": 2.7,
+      "releaseWindow": 0.3,
+      "keys": [
+        "K",
+        "J"
+      ],
+      "type": "dual-simultaneous"
+    },
+    {
+      "id": 1,
+      "startTime": 4.703,
+      "duration": 2.7,
+      "releaseWindow": 0.3,
+      "keys": [
+        "J",
+        "K"
+      ],
+      "type": "dual-simultaneous"
+    },
+    {
+      "id": 2,
+      "startTime": 7.803,
+      "duration": 2.7,
+      "releaseWindow": 0.3,
+      "keys": [
+        "J",
+        "K"
+      ],
+      "type": "dual-simultaneous"
+    },
+    {
+      "id": 3,
+      "startTime": 10.904,
+      "duration": 2.7,
+      "releaseWindow": 0.3,
+      "keys": [
+        "J",
+        "K"
+      ],
+      "type": "dual-simultaneous"
+    },
+    {
+      "id": 4,
+      "startTime": 14.004,
+      "duration": 2.7,
+      "releaseWindow": 0.3,
+      "keys": [
+        "J",
+        "K"
+      ],
+      "type": "dual-simultaneous"
+    },
+    {
+      "id": 5,
+      "startTime": 17.105,
+      "duration": 2.25,
+      "releaseWindow": 0.3,
+      "keys": [
+        "L"
+      ],
+      "type": "single"
+    },
+    {
+      "id": 6,
+      "startTime": 19.755,
+      "duration": 2.25,
+      "releaseWindow": 0.3,
+      "keys": [
+        "L"
+      ],
+      "type": "single"
+    },
+    {
+      "id": 7,
+      "startTime": 22.405,
+      "duration": 2.25,
+      "releaseWindow": 0.3,
+      "keys": [
+        "S",
+        "L"
+      ],
+      "type": "dual-simultaneous"
+    },
+    {
+      "id": 8,
+      "startTime": 25.056,
+      "duration": 2.25,
+      "releaseWindow": 0.3,
+      "keys": [
+        "L"
+      ],
+      "type": "single"
+    },
+    {
+      "id": 9,
+      "startTime": 27.706,
+      "duration": 2.25,
+      "releaseWindow": 0.3,
+      "keys": [
+        "L"
+      ],
+      "type": "single"
+    },
+    {
+      "id": 10,
+      "startTime": 30.357,
+      "duration": 2.25,
+      "releaseWindow": 0.3,
+      "keys": [
+        "L"
+      ],
+      "type": "single"
+    },
+    {
+      "id": 11,
+      "startTime": 33.007,
+      "duration": 2.517,
+      "releaseWindow": 0.3,
+      "keys": [
+        "S"
+      ],
+      "type": "single"
+    },
+    {
+      "id": 12,
+      "startTime": 35.924,
+      "duration": 2.517,
+      "releaseWindow": 0.3,
+      "keys": [
+        "D",
+        "S"
+      ],
+      "type": "dual-simultaneous"
+    },
+    {
+      "id": 13,
+      "startTime": 38.842,
+      "duration": 2.517,
+      "releaseWindow": 0.3,
+      "keys": [
+        "D"
+      ],
+      "type": "single"
+    }
+  ],
+  "_debug": {
+    "eventsWithLabels": [
+      {
+        "id": 0,
+        "startTime": 1.602,
+        "duration": 2.7,
+        "releaseWindow": 0.3,
+        "keys": [
+          "K",
+          "J"
+        ],
+        "type": "dual-simultaneous",
+        "_bandLabel": "High+MidHi",
+        "_dominantIdx": 4
+      },
+      {
+        "id": 1,
+        "startTime": 4.703,
+        "duration": 2.7,
+        "releaseWindow": 0.3,
+        "keys": [
+          "J",
+          "K"
+        ],
+        "type": "dual-simultaneous",
+        "_bandLabel": "MidHi+High",
+        "_dominantIdx": 3
+      },
+      {
+        "id": 2,
+        "startTime": 7.803,
+        "duration": 2.7,
+        "releaseWindow": 0.3,
+        "keys": [
+          "J",
+          "K"
+        ],
+        "type": "dual-simultaneous",
+        "_bandLabel": "MidHi+High",
+        "_dominantIdx": 3
+      },
+      {
+        "id": 3,
+        "startTime": 10.904,
+        "duration": 2.7,
+        "releaseWindow": 0.3,
+        "keys": [
+          "J",
+          "K"
+        ],
+        "type": "dual-simultaneous",
+        "_bandLabel": "MidHi+High",
+        "_dominantIdx": 3
+      },
+      {
+        "id": 4,
+        "startTime": 14.004,
+        "duration": 2.7,
+        "releaseWindow": 0.3,
+        "keys": [
+          "J",
+          "K"
+        ],
+        "type": "dual-simultaneous",
+        "_bandLabel": "MidHi+High",
+        "_dominantIdx": 3
+      },
+      {
+        "id": 5,
+        "startTime": 17.105,
+        "duration": 2.25,
+        "releaseWindow": 0.3,
+        "keys": [
+          "L"
+        ],
+        "type": "single",
+        "_bandLabel": "Ultra",
+        "_dominantIdx": 5
+      },
+      {
+        "id": 6,
+        "startTime": 19.755,
+        "duration": 2.25,
+        "releaseWindow": 0.3,
+        "keys": [
+          "L"
+        ],
+        "type": "single",
+        "_bandLabel": "Ultra",
+        "_dominantIdx": 5
+      },
+      {
+        "id": 7,
+        "startTime": 22.405,
+        "duration": 2.25,
+        "releaseWindow": 0.3,
+        "keys": [
+          "S",
+          "L"
+        ],
+        "type": "dual-simultaneous",
+        "_bandLabel": "Low+Ultra",
+        "_dominantIdx": 0
+      },
+      {
+        "id": 8,
+        "startTime": 25.056,
+        "duration": 2.25,
+        "releaseWindow": 0.3,
+        "keys": [
+          "L"
+        ],
+        "type": "single",
+        "_bandLabel": "Ultra",
+        "_dominantIdx": 5
+      },
+      {
+        "id": 9,
+        "startTime": 27.706,
+        "duration": 2.25,
+        "releaseWindow": 0.3,
+        "keys": [
+          "L"
+        ],
+        "type": "single",
+        "_bandLabel": "Ultra",
+        "_dominantIdx": 5
+      },
+      {
+        "id": 10,
+        "startTime": 30.357,
+        "duration": 2.25,
+        "releaseWindow": 0.3,
+        "keys": [
+          "L"
+        ],
+        "type": "single",
+        "_bandLabel": "Ultra",
+        "_dominantIdx": 5
+      },
+      {
+        "id": 11,
+        "startTime": 33.007,
+        "duration": 2.517,
+        "releaseWindow": 0.3,
+        "keys": [
+          "S"
+        ],
+        "type": "single",
+        "_bandLabel": "Low",
+        "_dominantIdx": 0
+      },
+      {
+        "id": 12,
+        "startTime": 35.924,
+        "duration": 2.517,
+        "releaseWindow": 0.3,
+        "keys": [
+          "D",
+          "S"
+        ],
+        "type": "dual-simultaneous",
+        "_bandLabel": "MidLow+Low",
+        "_dominantIdx": 1
+      },
+      {
+        "id": 13,
+        "startTime": 38.842,
+        "duration": 2.517,
+        "releaseWindow": 0.3,
+        "keys": [
+          "D"
+        ],
+        "type": "single",
+        "_bandLabel": "MidLow",
+        "_dominantIdx": 1
+      }
+    ],
+    "smoothFrameCount": 3872
+  }
+}
